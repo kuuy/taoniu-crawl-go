@@ -1,4 +1,4 @@
-package spiders
+package repositories
 
 import (
   "bytes"

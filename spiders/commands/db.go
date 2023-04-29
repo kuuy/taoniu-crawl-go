@@ -2,6 +2,7 @@ package commands
 
 import (
   "log"
+  "taoniu.local/crawls/spiders/models"
 
   "github.com/urfave/cli/v2"
   "gorm.io/gorm"
@@ -41,6 +42,8 @@ func NewDbCommand() *cli.Command {
 
 func (h *DbHandler) migrate() error {
   log.Println("process migrator")
-  //h.Db.AutoMigrate()
+  h.Db.AutoMigrate(
+    &models.Source{},
+  )
   return nil
 }
