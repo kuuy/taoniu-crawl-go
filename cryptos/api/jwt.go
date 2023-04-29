@@ -3,7 +3,7 @@ package api
 import (
   "net/http"
   "strings"
-  repositories "taoniu.crawl.local/cryptos/repositories"
+  repositories "taoniu.local/crawls/cryptos/repositories"
 )
 
 type JwtHandler struct{}

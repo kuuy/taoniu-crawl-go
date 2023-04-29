@@ -8,7 +8,7 @@ import (
   "github.com/joho/godotenv"
   "github.com/urfave/cli/v2"
 
-  "taoniu.local/crawls/cryptos/commands"
+  "taoniu.local/crawls/spiders/commands"
 )
 
 func main() {
@@ -22,7 +22,7 @@ func main() {
   }
 
   app := &cli.App{
-    Name:  "cryptos commands",
+    Name:  "spiders commands",
     Usage: "",
     Action: func(c *cli.Context) error {
       if c.Command.Action == nil {

@@ -6,7 +6,7 @@ import (
   "github.com/urfave/cli/v2"
   "gorm.io/gorm"
 
-  "taoniu.local/crawls/cryptos/common"
+  "taoniu.local/crawls/spiders/common"
 )
 
 type DbHandler struct {
