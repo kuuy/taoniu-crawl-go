@@ -42,10 +42,10 @@ func NewSourcesCommand() *cli.Command {
         },
       },
       {
-        Name:  "crawl",
+        Name:  "flush",
         Usage: "",
         Action: func(c *cli.Context) error {
-          if err := h.crawl(); err != nil {
+          if err := h.flush(); err != nil {
             return cli.Exit(err.Error(), 1)
           }
           return nil
@@ -92,6 +92,114 @@ func (h *SourcesHandler) add() error {
       },
     },
   }
+  extractRules["news-list"] = &repositories.ExtractRules{
+    Container: &repositories.HtmlExtractNode{
+      Selector: "#news_tabs",
+    },
+    List: &repositories.HtmlExtractNode{
+      Selector: "ul._2VG1sacuKAPPtahDo9EmQd li.clearfix",
+    },
+    Fields: []*repositories.HtmlExtractField{
+      {
+        Name: "title",
+        Node: &repositories.HtmlExtractNode{
+          Selector: "div.news-title h3 a",
+        },
+      },
+      {
+        Name: "link",
+        Node: &repositories.HtmlExtractNode{
+          Selector: "div.news-title h3 a",
+          Attr:     "href",
+        },
+        RegexReplace: []*repositories.RegexReplace{
+          {
+            Pattern: `/article/([^/]+)`,
+            Value:   "$1",
+          },
+        },
+      },
+      {
+        Name: "source",
+        Node: &repositories.HtmlExtractNode{
+          Selector: "div.news-info span.category",
+        },
+      },
+      {
+        Name: "published-time",
+        Node: &repositories.HtmlExtractNode{
+          Selector: "div.news-info span.news-published-time",
+        },
+      },
+    },
+  }
+  extractRules["top-list"] = &repositories.ExtractRules{
+    Container: &repositories.HtmlExtractNode{
+      Selector: "ul.top-list",
+    },
+    List: &repositories.HtmlExtractNode{
+      Selector: "li h3 a",
+    },
+    Fields: []*repositories.HtmlExtractField{
+      {
+        Name: "title",
+        Node: &repositories.HtmlExtractNode{},
+      },
+      {
+        Name: "link",
+        Node: &repositories.HtmlExtractNode{
+          Attr: "href",
+        },
+        RegexReplace: []*repositories.RegexReplace{
+          {
+            Pattern: `/article/([^/]+)`,
+            Value:   "$1",
+          },
+        },
+      },
+    },
+  }
+  extractRules["hot-list"] = &repositories.ExtractRules{
+    Container: &repositories.HtmlExtractNode{
+      Selector: "div.hot-list",
+    },
+    List: &repositories.HtmlExtractNode{
+      Selector: "div.news-detail",
+    },
+    Fields: []*repositories.HtmlExtractField{
+      {
+        Name: "title",
+        Node: &repositories.HtmlExtractNode{
+          Selector: "div.news-title a",
+        },
+      },
+      {
+        Name: "link",
+        Node: &repositories.HtmlExtractNode{
+          Selector: "div.news-title a",
+          Attr:     "href",
+        },
+        RegexReplace: []*repositories.RegexReplace{
+          {
+            Pattern: `/article/([^/]+).html`,
+            Value:   "$1",
+          },
+        },
+      },
+      {
+        Name: "category",
+        Node: &repositories.HtmlExtractNode{
+          Selector: "span.news-category",
+        },
+      },
+      {
+        Name: "published-time",
+        Node: &repositories.HtmlExtractNode{
+          Selector: "span.news-published-time",
+        },
+      },
+    },
+  }
   source := &models.Source{
     Url:          url,
     Headers:      h.Repository.JSONMap(headers),
@@ -103,13 +211,13 @@ func (h *SourcesHandler) add() error {
   return h.Repository.Add(parentId, name, slug, source)
 }
 
-func (h *SourcesHandler) crawl() error {
-  log.Println("sources crawl processing...")
+func (h *SourcesHandler) flush() error {
+  log.Println("sources flush processing...")
   source, err := h.Repository.Get("aicoin-news")
   if err != nil {
     return err
   }
-  err = h.Repository.Crawl(source)
+  err = h.Repository.Flush(source)
   if err != nil {
     return err
   }

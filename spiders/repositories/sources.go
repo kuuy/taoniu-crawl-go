@@ -123,7 +123,7 @@ func (r *SourcesRepository) Add(
   return nil
 }
 
-func (r *SourcesRepository) Crawl(source *models.Source) error {
+func (r *SourcesRepository) Flush(source *models.Source) error {
   tr := &http.Transport{
     DisableKeepAlives: true,
   }
@@ -183,7 +183,7 @@ func (r *SourcesRepository) Crawl(source *models.Source) error {
 }
 
 func (r *SourcesRepository) Extract(doc *goquery.Document, rules *ExtractRules) ([]map[string]string, error) {
-  var container = doc.Find(rules.Container.Selector).First()
+  var container = doc.Find(rules.Container.Selector).Eq(rules.Container.Index)
   if container.Nodes == nil {
     return nil, errors.New("container not exists")
   }
