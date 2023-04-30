@@ -7,7 +7,6 @@ import (
   "github.com/urfave/cli/v2"
 
   "taoniu.local/crawls/spiders/common"
-  "taoniu.local/crawls/spiders/models"
   "taoniu.local/crawls/spiders/repositories"
 )
 
@@ -32,10 +31,10 @@ func NewSourcesCommand() *cli.Command {
     },
     Subcommands: []*cli.Command{
       {
-        Name:  "add",
+        Name:  "save",
         Usage: "",
         Action: func(c *cli.Context) error {
-          if err := h.add(); err != nil {
+          if err := h.save(); err != nil {
             return cli.Exit(err.Error(), 1)
           }
           return nil
@@ -55,7 +54,7 @@ func NewSourcesCommand() *cli.Command {
   }
 }
 
-func (h *SourcesHandler) add() error {
+func (h *SourcesHandler) save() error {
   log.Println("sources add processing...")
   parentId := ""
   name := "资讯（AICOIN）"
@@ -200,15 +199,19 @@ func (h *SourcesHandler) add() error {
       },
     },
   }
-  source := &models.Source{
-    Url:          url,
-    Headers:      h.Repository.JSONMap(headers),
-    UseProxy:     false,
-    Timeout:      10,
-    ExtractRules: h.Repository.JSONMap(extractRules),
-  }
+  useProxy := false
+  timeout := 10
 
-  return h.Repository.Add(parentId, name, slug, source)
+  return h.Repository.Save(
+    parentId,
+    name,
+    slug,
+    url,
+    headers,
+    useProxy,
+    timeout,
+    extractRules,
+  )
 }
 
 func (h *SourcesHandler) flush() error {

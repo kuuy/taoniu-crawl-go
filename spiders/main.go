@@ -36,6 +36,7 @@ func main() {
       commands.NewApiCommand(),
       commands.NewDbCommand(),
       commands.NewSourcesCommand(),
+      commands.NewGrpcCommand(),
     },
     Version: "0.0.0",
   }

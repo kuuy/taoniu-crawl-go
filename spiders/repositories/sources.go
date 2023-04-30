@@ -27,7 +27,7 @@ type SourcesRepository struct {
 type HtmlExtractField struct {
   Name         string           `json:"name"`
   Node         *HtmlExtractNode `json:"node"`
-  RegexReplace []*RegexReplace  `json:"replace"`
+  RegexReplace []*RegexReplace  `json:"regex_replace"`
 }
 
 type HtmlExtractNode struct {
@@ -38,7 +38,7 @@ type HtmlExtractNode struct {
 
 type RegexReplace struct {
   Pattern string `json:"pattern"`
-  Value   string `json:"replace"`
+  Value   string `json:"value"`
 }
 
 type ExtractRules struct {
@@ -83,13 +83,17 @@ func (r *SourcesRepository) Get(slug string) (*models.Source, error) {
   return entity, nil
 }
 
-func (r *SourcesRepository) Add(
-    parentId string,
-    name string,
-    slug string,
-    source *models.Source,
+func (r *SourcesRepository) Save(
+  parentId string,
+  name string,
+  slug string,
+  url string,
+  headers map[string]string,
+  useProxy bool,
+  timeout int,
+  extractRules map[string]*ExtractRules,
 ) error {
-  hash := sha1.Sum([]byte(source.Url))
+  hash := sha1.Sum([]byte(url))
 
   var entity *models.Source
   result := r.Db.Where("slug", slug).Take(&entity)
@@ -99,24 +103,24 @@ func (r *SourcesRepository) Add(
       ParentID:      parentId,
       Name:          name,
       Slug:          slug,
-      Url:           source.Url,
+      Url:           url,
       UrlSha1:       hex.EncodeToString(hash[:]),
-      Headers:       r.JSONMap(source.Headers),
-      UseProxy:      source.UseProxy,
-      Timeout:       source.Timeout,
-      ExtractRules:  r.JSONMap(source.ExtractRules),
+      Headers:       r.JSONMap(headers),
+      UseProxy:      useProxy,
+      Timeout:       timeout,
+      ExtractRules:  r.JSONMap(extractRules),
       ExtractResult: r.JSONMap(make(map[string]interface{})),
     }
     r.Db.Create(&entity)
   } else {
     entity.ParentID = parentId
     entity.Name = name
-    entity.Url = source.Url
+    entity.Url = url
     entity.UrlSha1 = hex.EncodeToString(hash[:])
-    entity.Headers = r.JSONMap(source.Headers)
-    entity.UseProxy = source.UseProxy
-    entity.Timeout = source.Timeout
-    entity.ExtractRules = r.JSONMap(source.ExtractRules)
+    entity.Headers = r.JSONMap(headers)
+    entity.UseProxy = useProxy
+    entity.Timeout = timeout
+    entity.ExtractRules = r.JSONMap(extractRules)
     r.Db.Model(&models.Source{ID: entity.ID}).Updates(entity)
   }
 

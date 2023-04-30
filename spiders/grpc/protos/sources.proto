@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package taoniu.local.crawls.grpc.services;
+option go_package = "taoniu.local/crawls/grpc/services";
+
+service Sources {
+  rpc Save(SaveRequest) returns (SaveResponse) {}
+}
+
+message SaveRequest {
+  string parentId = 1;
+  string name = 2;
+  string slug = 3;
+  string url = 4;
+  string headers = 5;
+  string useProxy = 6;
+  string timeout = 7;
+  repeated ExtractRules extractRules = 8;
+}
+
+message SaveResponse {
+  bool success = 1;
+}
+
+message ExtractRules {
+  string name = 1;
+  HtmlExtractNode container = 2;
+  HtmlExtractNode list = 3;
+  repeated HtmlExtractField fields = 4;
+}
+
+message JsonExtract {
+  HtmlExtractNode node = 1;
+  JsonExtractRules rules = 2;
+}
+
+message JsonExtractRules {
+  string container = 1;
+  string list = 2;
+  repeated JsonExtractField fields = 3;
+}
+
+message JsonExtractField {
+  string name = 1;
+  string path = 2;
+  string match = 3;
+}
+
+message HtmlExtractField {
+  string name = 1;
+  HtmlExtractNode node = 2;
+  repeated RegexReplace regexReplace = 3;
+}
+
+message HtmlExtractNode {
+  string selector = 1;
+  string attr = 2;
+  string index = 3;
+}
+
+message RegexReplace {
+  string pattern = 1;
+  string value = 2;
+}
