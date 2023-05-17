@@ -1,24 +1,23 @@
 package spiders
 
 import (
-  "fmt"
-  "os"
-
-  "google.golang.org/grpc"
-  "google.golang.org/grpc/credentials/insecure"
+  services "taoniu.local/crawls/cryptos/grpc/services/spiders"
+  pb "taoniu.local/crawls/cryptos/grpc/spiders/protos/sources"
 )
 
-type SourcesRepository struct{}
+type SourcesRepository struct {
+  Service *services.Sources
+}
 
-func (r *SourcesRepository) Add() error {
-  conn, err := grpc.Dial(
-    fmt.Sprintf("127.0.0.1:%v", os.Getenv("SPIDERS_API_PORT")),
-    grpc.WithTransportCredentials(insecure.NewCredentials()),
-  )
-  if err != nil {
-    return err
-  }
-  defer conn.Close()
-
-  return nil
+func (r *SourcesRepository) Save(
+  parentId string,
+  name string,
+  slug string,
+  url string,
+  headers map[string]string,
+  extractRules map[string]interface{},
+  useProxy bool,
+  timeout int,
+) (*pb.SaveReply, error) {
+  return r.Service.Save(parentId, name, slug, url, headers, extractRules, useProxy, timeout)
 }

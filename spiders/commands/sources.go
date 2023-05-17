@@ -64,7 +64,8 @@ func (h *SourcesHandler) save() error {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36",
   }
   extractRules := make(map[string]*repositories.ExtractRules)
-  extractRules["categories"] = &repositories.ExtractRules{
+  extractRules["categories"] = &repositories.ExtractRules{}
+  extractRules["categories"].Html = &repositories.HtmlExtractRules{
     Container: &repositories.HtmlExtractNode{
       Selector: "#news_tabs",
     },
@@ -91,7 +92,8 @@ func (h *SourcesHandler) save() error {
       },
     },
   }
-  extractRules["news-list"] = &repositories.ExtractRules{
+  extractRules["news-list"] = &repositories.ExtractRules{}
+  extractRules["news-list"].Html = &repositories.HtmlExtractRules{
     Container: &repositories.HtmlExtractNode{
       Selector: "#news_tabs",
     },
@@ -132,7 +134,8 @@ func (h *SourcesHandler) save() error {
       },
     },
   }
-  extractRules["top-list"] = &repositories.ExtractRules{
+  extractRules["top-list"] = &repositories.ExtractRules{}
+  extractRules["top-list"].Html = &repositories.HtmlExtractRules{
     Container: &repositories.HtmlExtractNode{
       Selector: "ul.top-list",
     },
@@ -158,7 +161,8 @@ func (h *SourcesHandler) save() error {
       },
     },
   }
-  extractRules["hot-list"] = &repositories.ExtractRules{
+  extractRules["hot-list"] = &repositories.ExtractRules{}
+  extractRules["hot-list"].Html = &repositories.HtmlExtractRules{
     Container: &repositories.HtmlExtractNode{
       Selector: "div.hot-list",
     },

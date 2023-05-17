@@ -6,13 +6,16 @@ import (
   "encoding/json"
   "errors"
   "fmt"
+  "io/ioutil"
   "net"
   "net/http"
   "regexp"
+  "strings"
   "time"
 
   "github.com/PuerkitoBio/goquery"
   "github.com/rs/xid"
+  "github.com/tidwall/gjson"
   "gorm.io/datatypes"
   "gorm.io/gorm"
 
@@ -24,10 +27,15 @@ type SourcesRepository struct {
   Db *gorm.DB
 }
 
-type HtmlExtractField struct {
-  Name         string           `json:"name"`
-  Node         *HtmlExtractNode `json:"node"`
-  RegexReplace []*RegexReplace  `json:"regex_replace"`
+type ExtractRules struct {
+  Html *HtmlExtractRules `json:"html"`
+  Json *JsonExtractRules `json:"json"`
+}
+
+type HtmlExtractRules struct {
+  Container *HtmlExtractNode    `json:"container"`
+  List      *HtmlExtractNode    `json:"list"`
+  Fields    []*HtmlExtractField `json:"fields"`
 }
 
 type HtmlExtractNode struct {
@@ -36,33 +44,36 @@ type HtmlExtractNode struct {
   Index    int    `json:"index"`
 }
 
+type HtmlExtractField struct {
+  Name         string           `json:"name"`
+  Node         *HtmlExtractNode `json:"node"`
+  Match        string           `json:"match"`
+  RegexReplace []*RegexReplace  `json:"regex_replace"`
+  TextReplace  []*TextReplace   `json:"text_replace"`
+}
+
 type RegexReplace struct {
   Pattern string `json:"pattern"`
   Value   string `json:"value"`
 }
 
-type ExtractRules struct {
-  Container *HtmlExtractNode    `json:"container"`
-  List      *HtmlExtractNode    `json:"list"`
-  Json      []*JsonExtract      `json:"json"`
-  Fields    []*HtmlExtractField `json:"fields"`
-}
-
-type JsonExtract struct {
-  Node  *HtmlExtractNode  `json:"node"`
-  Rules *JsonExtractRules `json:"rules"`
-}
-
-type JsonExtractField struct {
-  Name  string `json:"name"`
-  Path  string `json:"path"`
-  Match string `json:"match"`
+type TextReplace struct {
+  Text  string `json:"text"`
+  Value string `json:"value"`
 }
 
 type JsonExtractRules struct {
-  Container string              `json:"container"`
+  Container string              `json:"node"`
   List      string              `json:"list"`
   Fields    []*JsonExtractField `json:"fields"`
+}
+
+type JsonExtractField struct {
+  Name         string          `json:"name"`
+  Path         string          `json:"path"`
+  Match        string          `json:"match"`
+  RegexReplace []*RegexReplace `json:"regex_replace"`
+  TextReplace  []*TextReplace  `json:"text_replace"`
 }
 
 func (r *SourcesRepository) Find(id string) (*models.Source, error) {
@@ -166,16 +177,48 @@ func (r *SourcesRepository) Flush(source *models.Source) error {
     )
   }
 
-  doc, err := goquery.NewDocumentFromReader(resp.Body)
-  if err != nil {
-    return err
-  }
+  var content string
+  var doc *goquery.Document
 
   result := make(map[string]interface{})
-  for key, rules := range source.ExtractRules {
-    result[key], err = r.Extract(doc, r.ToExtractRules(rules))
-    if err != nil {
-      continue
+  for key, value := range source.ExtractRules {
+    rules := r.ToExtractRules(value)
+    if rules.Html != nil {
+      if doc == nil {
+        doc, err = goquery.NewDocumentFromReader(resp.Body)
+        if err != nil {
+          return err
+        }
+      }
+      if rules.Html.List != nil {
+        result[key], err = r.ExtractHtmlList(doc, rules.Html)
+      } else {
+        result[key], err = r.ExtractHtml(doc, rules.Html)
+      }
+    }
+    if rules.Json != nil {
+      if _, ok := result[key]; ok {
+        content = result[key].(string)
+      } else {
+        if content == "" {
+          body, _ := ioutil.ReadAll(resp.Body)
+          content = string(body)
+          if content == "" {
+            return errors.New("content is empty")
+          }
+        }
+      }
+      if rules.Json.List != "" {
+        result[key], err = r.ExtractJsonList(content, rules.Json)
+        if err != nil {
+          continue
+        }
+      } else {
+        result[key], err = r.ExtractJson(content, rules.Json)
+        if err != nil {
+          continue
+        }
+      }
     }
   }
 
@@ -186,17 +229,67 @@ func (r *SourcesRepository) Flush(source *models.Source) error {
   return nil
 }
 
-func (r *SourcesRepository) Extract(doc *goquery.Document, rules *ExtractRules) ([]map[string]string, error) {
+func (r *SourcesRepository) ExtractHtml(doc *goquery.Document, rules *HtmlExtractRules) (map[string]string, error) {
   var container = doc.Find(rules.Container.Selector).Eq(rules.Container.Index)
   if container.Nodes == nil {
     return nil, errors.New("container not exists")
   }
+
+  var data = make(map[string]string)
+  for _, field := range rules.Fields {
+    if field.Node.Selector != "" {
+      selection := container.Find(field.Node.Selector).Eq(field.Node.Index)
+      if selection.Nodes == nil {
+        continue
+      }
+      if field.Node.Attr != "" {
+        data[field.Name], _ = selection.Attr(field.Node.Attr)
+      } else {
+        data[field.Name] = selection.Text()
+      }
+    } else {
+      if field.Node.Attr != "" {
+        attr, exists := container.Attr(field.Node.Attr)
+        if !exists {
+          continue
+        }
+        data[field.Name] = attr
+      } else {
+        data[field.Name] = container.Text()
+      }
+    }
+
+    for _, replace := range field.RegexReplace {
+      m := regexp.MustCompile(replace.Pattern)
+      data[field.Name] = m.ReplaceAllString(data[field.Name], replace.Value)
+    }
+    for _, replace := range field.TextReplace {
+      data[field.Name] = strings.ReplaceAll(data[field.Name], replace.Text, replace.Value)
+    }
+
+    if field.Match != "" && field.Match != data[field.Name] {
+      return nil, errors.New("field not match")
+    }
+  }
+
+  return data, nil
+}
+
+func (r *SourcesRepository) ExtractHtmlList(doc *goquery.Document, rules *HtmlExtractRules) ([]map[string]string, error) {
+  var container = doc.Find(rules.Container.Selector).Eq(rules.Container.Index)
+  if container.Nodes == nil {
+    return nil, errors.New("container not exists")
+  }
+
   var result []map[string]string
   container.Find(rules.List.Selector).Each(func(i int, s *goquery.Selection) {
     var data = make(map[string]string)
     for _, field := range rules.Fields {
       if field.Node.Selector != "" {
-        selection := s.Find(field.Node.Selector).Eq(field.Node.Index)
+        selection := container.Find(field.Node.Selector).Eq(field.Node.Index)
+        if selection.Nodes == nil {
+          continue
+        }
         if field.Node.Attr != "" {
           data[field.Name], _ = selection.Attr(field.Node.Attr)
         } else {
@@ -204,18 +297,101 @@ func (r *SourcesRepository) Extract(doc *goquery.Document, rules *ExtractRules) 
         }
       } else {
         if field.Node.Attr != "" {
-          data[field.Name], _ = s.Attr(field.Node.Attr)
+          attr, exists := container.Attr(field.Node.Attr)
+          if !exists {
+            continue
+          }
+          data[field.Name] = attr
         } else {
-          data[field.Name] = s.Text()
+          data[field.Name] = container.Text()
         }
       }
+
       for _, replace := range field.RegexReplace {
         m := regexp.MustCompile(replace.Pattern)
         data[field.Name] = m.ReplaceAllString(data[field.Name], replace.Value)
       }
+      for _, replace := range field.TextReplace {
+        data[field.Name] = strings.ReplaceAll(data[field.Name], replace.Text, replace.Value)
+      }
+
+      if field.Match != "" && field.Match != data[field.Name] {
+        break
+      }
     }
     result = append(result, data)
   })
+
+  return result, nil
+}
+
+func (r *SourcesRepository) ExtractJson(content string, rules *JsonExtractRules) (map[string]interface{}, error) {
+  var container = gjson.Get(content, rules.Container)
+  if container.Raw == "" {
+    return nil, errors.New("container not exists")
+  }
+
+  var data = make(map[string]interface{})
+  for _, field := range rules.Fields {
+    selection := container.Get(field.Path)
+    if selection.Raw == "" {
+      continue
+    }
+    data[field.Name] = selection.Value()
+
+    if value, ok := data[field.Name].(string); ok {
+      for _, replace := range field.RegexReplace {
+        m := regexp.MustCompile(replace.Pattern)
+        data[field.Name] = m.ReplaceAllString(value, replace.Value)
+      }
+      for _, replace := range field.TextReplace {
+        data[field.Name] = strings.ReplaceAll(value, replace.Text, replace.Value)
+      }
+
+      if field.Match != "" && field.Match != data[field.Name] {
+        return nil, errors.New("field not match")
+      }
+    }
+  }
+
+  return data, nil
+}
+
+func (r *SourcesRepository) ExtractJsonList(content string, rules *JsonExtractRules) ([]map[string]interface{}, error) {
+  var container = gjson.Get(content, rules.Container)
+  if container.Raw == "" {
+    return nil, errors.New("container not exists")
+  }
+
+  var result []map[string]interface{}
+  container.Get(rules.List).ForEach(func(_, s gjson.Result) bool {
+    var data = make(map[string]interface{})
+    for _, field := range rules.Fields {
+      selection := s.Get(field.Path)
+      if selection.Raw == "" {
+        continue
+      }
+      data[field.Name] = selection.Value()
+
+      if value, ok := data[field.Name].(string); ok {
+        for _, replace := range field.RegexReplace {
+          m := regexp.MustCompile(replace.Pattern)
+          data[field.Name] = m.ReplaceAllString(value, replace.Value)
+        }
+        for _, replace := range field.TextReplace {
+          data[field.Name] = strings.ReplaceAll(value, replace.Text, replace.Value)
+        }
+
+        if field.Match != "" && field.Match != data[field.Name] {
+          return false
+        }
+      }
+    }
+    result = append(result, data)
+
+    return true
+  })
+
   return result, nil
 }
 

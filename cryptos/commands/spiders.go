@@ -11,7 +11,6 @@ func NewSpidersCommand() *cli.Command {
     Usage: "",
     Subcommands: []*cli.Command{
       spiders.NewSourcesCommand(),
-      spiders.NewHelloworldCommand(),
     },
   }
 }

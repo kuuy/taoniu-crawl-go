@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package taoniu.local.crawls.spiders.grpc.services;
+option go_package = "taoniu.local/crawls/spiders/grpc/services";
+
+service Sources {
+  rpc Save(SaveRequest) returns (SaveReply) {}
+}
+
+message SaveRequest {
+  string parentId = 1;
+  string name = 2;
+  string slug = 3;
+  string url = 4;
+  repeated HttpHeader headers = 5;
+  repeated ExtractRules extractRules = 6;
+  bool useProxy = 7;
+  uint32 timeout = 8;
+}
+
+message HttpHeader {
+  string name = 1;
+  string value = 2;
+}
+
+message SaveReply {
+  bool success = 1;
+  string message = 2;
+}
+
+message ExtractRules {
+  string name = 1;
+  HtmlExtractRules html = 2;
+  JsonExtractRules json = 3;
+}
+
+message HtmlExtractRules {
+  HtmlExtractNode container = 1;
+  HtmlExtractNode list = 2;
+  repeated HtmlExtractField fields = 3;
+}
+
+message HtmlExtractNode {
+  string selector = 1;
+  string attr = 2;
+  uint32 index = 3;
+}
+
+message HtmlExtractField {
+  string name = 1;
+  HtmlExtractNode node = 2;
+  string match = 3;
+  repeated RegexReplace regexReplace = 4;
+  repeated TextReplace textReplace = 5;
+}
+
+message JsonExtractRules {
+  string container = 1;
+  string list = 2;
+  repeated JsonExtractField fields = 3;
+}
+
+message JsonExtractField {
+  string name = 1;
+  string path = 2;
+  string match = 3;
+  repeated RegexReplace regexReplace = 4;
+  repeated TextReplace textReplace = 5;
+}
+
+message RegexReplace {
+  string pattern = 1;
+  string value = 2;
+}
+
+message TextReplace {
+  string text = 1;
+  string value = 2;
+}
