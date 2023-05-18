@@ -149,7 +149,7 @@ func (h *SourcesHandler) save() error {
   node = make(map[string]interface{})
   node["selector"] = "div.news-info span.news-published-time"
   field = make(map[string]interface{})
-  field["name"] = "published-time"
+  field["name"] = "published_time"
   field["node"] = node
   fields = append(fields, field)
 
@@ -157,7 +157,7 @@ func (h *SourcesHandler) save() error {
 
   rules = make(map[string]interface{})
   rules["html"] = html
-  extractRules["news-list"] = rules
+  extractRules["news_list"] = rules
 
   html = make(map[string]interface{})
 
@@ -241,7 +241,7 @@ func (h *SourcesHandler) save() error {
   node = make(map[string]interface{})
   node["selector"] = "span.news-published-time"
   field = make(map[string]interface{})
-  field["name"] = "published-time"
+  field["name"] = "published_time"
   field["node"] = node
   fields = append(fields, field)
 
@@ -249,7 +249,7 @@ func (h *SourcesHandler) save() error {
 
   rules = make(map[string]interface{})
   rules["html"] = html
-  extractRules["hot-list"] = rules
+  extractRules["hot_list"] = rules
 
   useProxy := true
   timeout := 10
