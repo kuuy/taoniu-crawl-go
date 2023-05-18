@@ -70,18 +70,21 @@ func (h *SourcesHandler) save() error {
       Selector: "#news_tabs",
     },
     List: &repositories.HtmlExtractNode{
-      Selector: "ul.nav li a",
+      Selector: "ul.nav li[role='presentation']",
     },
     Fields: []*repositories.HtmlExtractField{
       {
-        Name: "title",
-        Node: &repositories.HtmlExtractNode{},
+        Name: "name",
+        Node: &repositories.HtmlExtractNode{
+          Selector: "a",
+        },
       },
       {
         Name: "link",
         Node: &repositories.HtmlExtractNode{
-          Attr:  "href",
-          Index: 0,
+          Selector: "a",
+          Attr:     "href",
+          Index:    0,
         },
         RegexReplace: []*repositories.RegexReplace{
           {
@@ -115,7 +118,7 @@ func (h *SourcesHandler) save() error {
         },
         RegexReplace: []*repositories.RegexReplace{
           {
-            Pattern: `/article/([^/]+)`,
+            Pattern: `/article/([^/]+).html`,
             Value:   "$1",
           },
         },
@@ -154,7 +157,7 @@ func (h *SourcesHandler) save() error {
         },
         RegexReplace: []*repositories.RegexReplace{
           {
-            Pattern: `/article/([^/]+)`,
+            Pattern: `/article/([^/]+).html`,
             Value:   "$1",
           },
         },
@@ -203,7 +206,7 @@ func (h *SourcesHandler) save() error {
       },
     },
   }
-  useProxy := false
+  useProxy := true
   timeout := 10
 
   return h.Repository.Save(

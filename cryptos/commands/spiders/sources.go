@@ -71,7 +71,7 @@ func (h *SourcesHandler) save() error {
   container["selector"] = "#news_tabs"
 
   list = make(map[string]interface{})
-  list["selector"] = "ul.nav li a"
+  list["selector"] = "ul.nav li[role='presentation']"
 
   html["container"] = container
   html["list"] = list
@@ -79,12 +79,14 @@ func (h *SourcesHandler) save() error {
   fields = make([]interface{}, 0)
 
   node = make(map[string]interface{})
+  node["selector"] = "a"
   field = make(map[string]interface{})
   field["name"] = "title"
   field["node"] = node
   fields = append(fields, field)
 
   node = make(map[string]interface{})
+  node["selector"] = "a"
   node["attr"] = "href"
   field = make(map[string]interface{})
   field["name"] = "link"
@@ -131,7 +133,7 @@ func (h *SourcesHandler) save() error {
   field["node"] = node
   regexReplace = make([]map[string]string, 0)
   regexReplace = append(regexReplace, map[string]string{
-    "pattern": "/article/([^/]+)",
+    "pattern": "/article/([^/]+).html",
     "value":   "$1",
   })
   field["regex_replace"] = regexReplace
@@ -183,7 +185,7 @@ func (h *SourcesHandler) save() error {
   field["node"] = node
   regexReplace = make([]map[string]string, 0)
   regexReplace = append(regexReplace, map[string]string{
-    "pattern": "/article/([^/]+)",
+    "pattern": "/article/([^/]+).html",
     "value":   "$1",
   })
   field["regex_replace"] = regexReplace

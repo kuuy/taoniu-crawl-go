@@ -286,7 +286,7 @@ func (r *SourcesRepository) ExtractHtmlList(doc *goquery.Document, rules *HtmlEx
     var data = make(map[string]string)
     for _, field := range rules.Fields {
       if field.Node.Selector != "" {
-        selection := container.Find(field.Node.Selector).Eq(field.Node.Index)
+        selection := s.Find(field.Node.Selector).Eq(field.Node.Index)
         if selection.Nodes == nil {
           continue
         }
@@ -297,13 +297,13 @@ func (r *SourcesRepository) ExtractHtmlList(doc *goquery.Document, rules *HtmlEx
         }
       } else {
         if field.Node.Attr != "" {
-          attr, exists := container.Attr(field.Node.Attr)
+          attr, exists := s.Attr(field.Node.Attr)
           if !exists {
             continue
           }
           data[field.Name] = attr
         } else {
-          data[field.Name] = container.Text()
+          data[field.Name] = s.Text()
         }
       }
 
