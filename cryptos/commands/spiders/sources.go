@@ -89,7 +89,7 @@ func (h *SourcesHandler) save() error {
   node["selector"] = "a"
   node["attr"] = "href"
   field = make(map[string]interface{})
-  field["name"] = "link"
+  field["name"] = "slug"
   field["node"] = node
   regexReplace = make([]map[string]string, 0)
   regexReplace = append(regexReplace, map[string]string{
@@ -129,7 +129,7 @@ func (h *SourcesHandler) save() error {
   node["selector"] = "div.news-title h3 a"
   node["attr"] = "href"
   field = make(map[string]interface{})
-  field["name"] = "link"
+  field["name"] = "id"
   field["node"] = node
   regexReplace = make([]map[string]string, 0)
   regexReplace = append(regexReplace, map[string]string{
@@ -181,7 +181,7 @@ func (h *SourcesHandler) save() error {
   node = make(map[string]interface{})
   node["attr"] = "href"
   field = make(map[string]interface{})
-  field["name"] = "link"
+  field["name"] = "id"
   field["node"] = node
   regexReplace = make([]map[string]string, 0)
   regexReplace = append(regexReplace, map[string]string{
@@ -221,7 +221,7 @@ func (h *SourcesHandler) save() error {
   node["selector"] = "div.news-title a"
   node["attr"] = "href"
   field = make(map[string]interface{})
-  field["name"] = "link"
+  field["name"] = "id"
   field["node"] = node
   regexReplace = make([]map[string]string, 0)
   regexReplace = append(regexReplace, map[string]string{
