@@ -142,9 +142,9 @@ func (srv *Sources) MapHtmlExtractRules(data *pb.HtmlExtractRules) *repositories
   }
   if data.List != nil {
     rules.List = &repositories.HtmlExtractNode{
-      Selector: data.Container.Selector,
-      Attr:     data.Container.Attr,
-      Index:    int(data.Container.Index),
+      Selector: data.List.Selector,
+      Attr:     data.List.Attr,
+      Index:    int(data.List.Index),
     }
   }
   rules.Fields = srv.MapHtmlExtractField(data.Fields)
@@ -164,11 +164,28 @@ func (srv *Sources) MapHtmlExtractField(items []*pb.HtmlExtractField) []*reposit
       Attr:     item.Node.Attr,
       Index:    int(item.Node.Index),
     }
+
     if len(item.Fields) > 0 {
       field.Fields = srv.MapHtmlExtractField(item.Fields)
     }
+
+    for _, replace := range item.RegexReplace {
+      field.RegexReplace = append(field.RegexReplace, &repositories.RegexReplace{
+        Pattern: replace.Pattern,
+        Value:   replace.Value,
+      })
+    }
+
+    for _, replace := range item.TextReplace {
+      field.TextReplace = append(field.TextReplace, &repositories.TextReplace{
+        Text:  replace.Text,
+        Value: replace.Value,
+      })
+    }
+
     fields = append(fields, field)
   }
+
   return fields
 }
 
@@ -258,9 +275,25 @@ func (srv *Sources) ToHtmlExtractField(items []*repositories.HtmlExtractField) [
       Attr:     item.Node.Attr,
       Index:    uint32(item.Node.Index),
     }
+
     if len(item.Fields) > 0 {
       field.Fields = srv.ToHtmlExtractField(item.Fields)
     }
+
+    for _, replace := range item.RegexReplace {
+      field.RegexReplace = append(field.RegexReplace, &pb.RegexReplace{
+        Pattern: replace.Pattern,
+        Value:   replace.Value,
+      })
+    }
+
+    for _, replace := range item.TextReplace {
+      field.TextReplace = append(field.TextReplace, &pb.TextReplace{
+        Text:  replace.Text,
+        Value: replace.Value,
+      })
+    }
+
     fields = append(fields, field)
   }
   return fields

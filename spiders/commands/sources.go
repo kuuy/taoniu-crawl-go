@@ -44,7 +44,12 @@ func NewSourcesCommand() *cli.Command {
         Name:  "flush",
         Usage: "",
         Action: func(c *cli.Context) error {
-          if err := h.flush(); err != nil {
+          slug := c.Args().Get(0)
+          if slug == "" {
+            log.Fatal("slug is empty")
+            return nil
+          }
+          if err := h.flush(slug); err != nil {
             return cli.Exit(err.Error(), 1)
           }
           return nil
@@ -221,9 +226,9 @@ func (h *SourcesHandler) save() error {
   )
 }
 
-func (h *SourcesHandler) flush() error {
+func (h *SourcesHandler) flush(slug string) error {
   log.Println("sources flush processing...")
-  source, err := h.Repository.Get("aicoin-news")
+  source, err := h.Repository.GetBySlug(slug)
   if err != nil {
     return err
   }
