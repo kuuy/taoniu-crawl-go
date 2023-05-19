@@ -35,7 +35,7 @@ func main() {
     Commands: []*cli.Command{
       commands.NewApiCommand(),
       commands.NewDbCommand(),
-      commands.NewSpidersCommand(),
+      commands.NewSourcesCommand(),
     },
     Version: "0.0.0",
   }

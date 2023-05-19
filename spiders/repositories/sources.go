@@ -45,11 +45,12 @@ type HtmlExtractNode struct {
 }
 
 type HtmlExtractField struct {
-  Name         string           `json:"name"`
-  Node         *HtmlExtractNode `json:"node"`
-  Match        string           `json:"match"`
-  RegexReplace []*RegexReplace  `json:"regex_replace"`
-  TextReplace  []*TextReplace   `json:"text_replace"`
+  Name         string              `json:"name"`
+  Node         *HtmlExtractNode    `json:"node"`
+  Match        string              `json:"match"`
+  RegexReplace []*RegexReplace     `json:"regex_replace"`
+  TextReplace  []*TextReplace      `json:"text_replace"`
+  Fields       []*HtmlExtractField `json:"fields"`
 }
 
 type RegexReplace struct {
@@ -69,11 +70,12 @@ type JsonExtractRules struct {
 }
 
 type JsonExtractField struct {
-  Name         string          `json:"name"`
-  Path         string          `json:"path"`
-  Match        string          `json:"match"`
-  RegexReplace []*RegexReplace `json:"regex_replace"`
-  TextReplace  []*TextReplace  `json:"text_replace"`
+  Name         string              `json:"name"`
+  Path         string              `json:"path"`
+  Match        string              `json:"match"`
+  RegexReplace []*RegexReplace     `json:"regex_replace"`
+  TextReplace  []*TextReplace      `json:"text_replace"`
+  Fields       []*JsonExtractField `json:"fields"`
 }
 
 func (r *SourcesRepository) Find(id string) (*models.Source, error) {
@@ -85,7 +87,16 @@ func (r *SourcesRepository) Find(id string) (*models.Source, error) {
   return entity, nil
 }
 
-func (r *SourcesRepository) Get(slug string) (*models.Source, error) {
+func (r *SourcesRepository) Get(id string) (*models.Source, error) {
+  var entity *models.Source
+  result := r.Db.Where("id = ?", id).First(&entity)
+  if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+    return nil, result.Error
+  }
+  return entity, nil
+}
+
+func (r *SourcesRepository) GetBySlug(slug string) (*models.Source, error) {
   var entity *models.Source
   result := r.Db.Where("slug", slug).Take(&entity)
   if errors.Is(result.Error, gorm.ErrRecordNotFound) {

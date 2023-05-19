@@ -30,6 +30,32 @@ func (srv *Sources) Client() pb.SourcesClient {
   return srv.SourcesClient
 }
 
+func (srv *Sources) Get(id string) (*pb.GetReply, error) {
+  request := &pb.GetRequest{
+    Id: id,
+  }
+
+  r, err := srv.Client().Get(srv.Ctx, request)
+  if err != nil {
+    return nil, err
+  }
+
+  return r, nil
+}
+
+func (srv *Sources) GetBySlug(slug string) (*pb.GetBySlugReply, error) {
+  request := &pb.GetBySlugRequest{
+    Slug: slug,
+  }
+
+  r, err := srv.Client().GetBySlug(srv.Ctx, request)
+  if err != nil {
+    return nil, err
+  }
+
+  return r, nil
+}
+
 func (srv *Sources) Save(
   parentId string,
   name string,
@@ -48,22 +74,23 @@ func (srv *Sources) Save(
     UseProxy: useProxy,
     Timeout:  uint32(timeout),
   }
+
   for name, value := range headers {
     request.Headers = append(request.Headers, &pb.HttpHeader{
       Name:  name,
       Value: value,
     })
   }
+
   for name, data := range extractRules {
     rules := &pb.ExtractRules{
       Name: name,
     }
-    rules.Html = &pb.HtmlExtractRules{}
-    rules.Json = &pb.JsonExtractRules{}
 
     data := data.(map[string]interface{})
 
     if html, ok := data["html"]; ok {
+      rules.Html = &pb.HtmlExtractRules{}
       html := html.(map[string]interface{})
       if container, ok := html["container"]; ok {
         container := container.(map[string]interface{})
@@ -147,6 +174,7 @@ func (srv *Sources) Save(
     }
 
     if json, ok := data["json"]; ok {
+      rules.Json = &pb.JsonExtractRules{}
       json := json.(map[string]interface{})
       if container, ok := json["container"]; ok {
         rules.Json.Container = container.(string)

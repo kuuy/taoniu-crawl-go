@@ -22,6 +22,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SourcesClient interface {
+	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetReply, error)
+	GetBySlug(ctx context.Context, in *GetBySlugRequest, opts ...grpc.CallOption) (*GetBySlugReply, error)
 	Save(ctx context.Context, in *SaveRequest, opts ...grpc.CallOption) (*SaveReply, error)
 }
 
@@ -31,6 +33,24 @@ type sourcesClient struct {
 
 func NewSourcesClient(cc grpc.ClientConnInterface) SourcesClient {
 	return &sourcesClient{cc}
+}
+
+func (c *sourcesClient) Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetReply, error) {
+	out := new(GetReply)
+	err := c.cc.Invoke(ctx, "/taoniu.local.crawls.spiders.grpc.services.Sources/Get", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sourcesClient) GetBySlug(ctx context.Context, in *GetBySlugRequest, opts ...grpc.CallOption) (*GetBySlugReply, error) {
+	out := new(GetBySlugReply)
+	err := c.cc.Invoke(ctx, "/taoniu.local.crawls.spiders.grpc.services.Sources/GetBySlug", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *sourcesClient) Save(ctx context.Context, in *SaveRequest, opts ...grpc.CallOption) (*SaveReply, error) {
@@ -46,6 +66,8 @@ func (c *sourcesClient) Save(ctx context.Context, in *SaveRequest, opts ...grpc.
 // All implementations must embed UnimplementedSourcesServer
 // for forward compatibility
 type SourcesServer interface {
+	Get(context.Context, *GetRequest) (*GetReply, error)
+	GetBySlug(context.Context, *GetBySlugRequest) (*GetBySlugReply, error)
 	Save(context.Context, *SaveRequest) (*SaveReply, error)
 	mustEmbedUnimplementedSourcesServer()
 }
@@ -54,6 +76,12 @@ type SourcesServer interface {
 type UnimplementedSourcesServer struct {
 }
 
+func (UnimplementedSourcesServer) Get(context.Context, *GetRequest) (*GetReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (UnimplementedSourcesServer) GetBySlug(context.Context, *GetBySlugRequest) (*GetBySlugReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBySlug not implemented")
+}
 func (UnimplementedSourcesServer) Save(context.Context, *SaveRequest) (*SaveReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Save not implemented")
 }
@@ -68,6 +96,42 @@ type UnsafeSourcesServer interface {
 
 func RegisterSourcesServer(s grpc.ServiceRegistrar, srv SourcesServer) {
 	s.RegisterService(&Sources_ServiceDesc, srv)
+}
+
+func _Sources_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SourcesServer).Get(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/taoniu.local.crawls.spiders.grpc.services.Sources/Get",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SourcesServer).Get(ctx, req.(*GetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Sources_GetBySlug_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBySlugRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SourcesServer).GetBySlug(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/taoniu.local.crawls.spiders.grpc.services.Sources/GetBySlug",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SourcesServer).GetBySlug(ctx, req.(*GetBySlugRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Sources_Save_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -95,6 +159,14 @@ var Sources_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "taoniu.local.crawls.spiders.grpc.services.Sources",
 	HandlerType: (*SourcesServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Get",
+			Handler:    _Sources_Get_Handler,
+		},
+		{
+			MethodName: "GetBySlug",
+			Handler:    _Sources_GetBySlug_Handler,
+		},
 		{
 			MethodName: "Save",
 			Handler:    _Sources_Save_Handler,

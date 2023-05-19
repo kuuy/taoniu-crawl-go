@@ -21,3 +21,11 @@ func (r *SourcesRepository) Save(
 ) (*pb.SaveReply, error) {
   return r.Service.Save(parentId, name, slug, url, headers, extractRules, useProxy, timeout)
 }
+
+func (r *SourcesRepository) Get(id string) (*pb.GetReply, error) {
+  return r.Service.Get(id)
+}
+
+func (r *SourcesRepository) GetBySlug(slug string) (*pb.GetBySlugReply, error) {
+  return r.Service.GetBySlug(slug)
+}

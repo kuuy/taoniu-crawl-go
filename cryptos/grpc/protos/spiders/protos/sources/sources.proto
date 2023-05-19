@@ -3,8 +3,48 @@ syntax = "proto3";
 package taoniu.local.crawls.spiders.grpc.services;
 option go_package = "taoniu.local/crawls/spiders/grpc/services";
 
+import "google/protobuf/timestamp.proto";
+
 service Sources {
+  rpc Get(GetRequest) returns (GetReply) {}
+  rpc GetBySlug(GetBySlugRequest) returns (GetBySlugReply) {}
   rpc Save(SaveRequest) returns (SaveReply) {}
+}
+
+message GetRequest {
+  string Id = 1;
+}
+
+message GetReply {
+  bool success = 1;
+  string message = 2;
+  SourceInfo data = 3;
+}
+
+message GetBySlugRequest {
+  string Slug = 1;
+}
+
+message GetBySlugReply {
+  bool success = 1;
+  string message = 2;
+  SourceInfo data = 3;
+}
+
+message SourceInfo {
+  string id = 1;
+  string parentId = 2;
+  string name = 3;
+  string slug = 4;
+  string url = 5;
+  repeated HttpHeader headers = 6;
+  bool useProxy = 7;
+  int32 timeout = 8;
+  repeated ExtractRules extractRules = 9;
+  repeated ExtractResult extractResult = 10;
+  int32 status = 11;
+  google.protobuf.Timestamp createdAt = 12;
+  google.protobuf.Timestamp updatedAt = 13;
 }
 
 message SaveRequest {
@@ -34,6 +74,12 @@ message ExtractRules {
   JsonExtractRules json = 3;
 }
 
+message ExtractResult {
+  string name = 1;
+  string value = 2;
+  repeated ExtractResult data = 3;
+}
+
 message HtmlExtractRules {
   HtmlExtractNode container = 1;
   HtmlExtractNode list = 2;
@@ -52,6 +98,7 @@ message HtmlExtractField {
   string match = 3;
   repeated RegexReplace regexReplace = 4;
   repeated TextReplace textReplace = 5;
+  repeated HtmlExtractField fields = 6;
 }
 
 message JsonExtractRules {
@@ -66,6 +113,7 @@ message JsonExtractField {
   string match = 3;
   repeated RegexReplace regexReplace = 4;
   repeated TextReplace textReplace = 5;
+  repeated JsonExtractField fields = 6;
 }
 
 message RegexReplace {

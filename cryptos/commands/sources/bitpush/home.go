@@ -1,4 +1,4 @@
-package spiders
+package bitpush
 
 import (
   "context"
@@ -10,18 +10,18 @@ import (
   repositories "taoniu.local/crawls/cryptos/repositories/spiders"
 )
 
-type SourcesHandler struct {
+type HomeHandler struct {
   Ctx        context.Context
   Repository *repositories.SourcesRepository
 }
 
-func NewSourcesCommand() *cli.Command {
-  var h SourcesHandler
+func NewHomeCommand() *cli.Command {
+  var h HomeHandler
   return &cli.Command{
-    Name:  "sources",
+    Name:  "home",
     Usage: "",
     Before: func(c *cli.Context) error {
-      h = SourcesHandler{
+      h = HomeHandler{
         Ctx: context.Background(),
       }
       h.Repository = &repositories.SourcesRepository{}
@@ -45,7 +45,7 @@ func NewSourcesCommand() *cli.Command {
   }
 }
 
-func (h *SourcesHandler) save() error {
+func (h *HomeHandler) save() error {
   log.Println("sources save processing...")
   parentId := ""
   name := "资讯（AICOIN）"
@@ -195,7 +195,7 @@ func (h *SourcesHandler) save() error {
 
   rules = make(map[string]interface{})
   rules["html"] = html
-  extractRules["top-list"] = rules
+  extractRules["top_list"] = rules
 
   html = make(map[string]interface{})
 
