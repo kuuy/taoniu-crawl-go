@@ -1,30 +1,23 @@
 package repositories
 
 import (
-  "crypto/sha1"
-  "encoding/hex"
   "encoding/json"
   "errors"
-  "fmt"
-  "io/ioutil"
-  "net"
-  "net/http"
-  "regexp"
-  "strings"
-  "time"
-
   "github.com/PuerkitoBio/goquery"
   "github.com/rs/xid"
   "github.com/tidwall/gjson"
   "gorm.io/datatypes"
   "gorm.io/gorm"
+  "net/url"
+  "regexp"
+  "strings"
 
-  "taoniu.local/crawls/spiders/common"
   "taoniu.local/crawls/spiders/models"
 )
 
 type SourcesRepository struct {
-  Db *gorm.DB
+  Db              *gorm.DB
+  TasksRepository *TasksRepository
 }
 
 type ExtractRules struct {
@@ -78,6 +71,15 @@ type JsonExtractField struct {
   Fields       []*JsonExtractField `json:"fields"`
 }
 
+func (r *SourcesRepository) Tasks() *TasksRepository {
+  if r.TasksRepository == nil {
+    r.TasksRepository = &TasksRepository{
+      Db: r.Db,
+    }
+  }
+  return r.TasksRepository
+}
+
 func (r *SourcesRepository) Find(id string) (*models.Source, error) {
   var entity *models.Source
   result := r.Db.First(&entity, "id", id)
@@ -111,35 +113,33 @@ func (r *SourcesRepository) Save(
   slug string,
   url string,
   headers map[string]string,
+  params map[string]interface{},
   useProxy bool,
   timeout int,
   extractRules map[string]*ExtractRules,
 ) error {
-  hash := sha1.Sum([]byte(url))
-
   var entity *models.Source
   result := r.Db.Where("slug", slug).Take(&entity)
   if errors.Is(result.Error, gorm.ErrRecordNotFound) {
     entity = &models.Source{
-      ID:            xid.New().String(),
-      ParentID:      parentId,
-      Name:          name,
-      Slug:          slug,
-      Url:           url,
-      UrlSha1:       hex.EncodeToString(hash[:]),
-      Headers:       r.JSONMap(headers),
-      UseProxy:      useProxy,
-      Timeout:       timeout,
-      ExtractRules:  r.JSONMap(extractRules),
-      ExtractResult: r.JSONMap(make(map[string]interface{})),
+      ID:           xid.New().String(),
+      ParentID:     parentId,
+      Name:         name,
+      Slug:         slug,
+      Url:          url,
+      Headers:      r.JSONMap(headers),
+      Params:       r.JSONMap(params),
+      UseProxy:     useProxy,
+      Timeout:      timeout,
+      ExtractRules: r.JSONMap(extractRules),
     }
     r.Db.Create(&entity)
   } else {
     entity.ParentID = parentId
     entity.Name = name
     entity.Url = url
-    entity.UrlSha1 = hex.EncodeToString(hash[:])
     entity.Headers = r.JSONMap(headers)
+    entity.Params = r.JSONMap(params)
     entity.UseProxy = useProxy
     entity.Timeout = timeout
     entity.ExtractRules = r.JSONMap(extractRules)
@@ -150,93 +150,49 @@ func (r *SourcesRepository) Save(
 }
 
 func (r *SourcesRepository) Flush(source *models.Source) error {
-  tr := &http.Transport{
-    DisableKeepAlives: true,
+  if len(source.Params) == 0 {
+    return r.Tasks().Save("", source.ID, source.Url)
   }
 
-  if source.UseProxy {
-    session := &common.ProxySession{
-      Proxy: fmt.Sprintf("socks5://127.0.0.1:1088?timeout=%ds", source.Timeout),
-    }
-    tr.DialContext = session.DialContext
-  } else {
-    session := &net.Dialer{}
-    tr.DialContext = session.DialContext
-  }
-
-  httpClient := &http.Client{
-    Transport: tr,
-    Timeout:   time.Duration(source.Timeout) * time.Second,
-  }
-
-  req, _ := http.NewRequest("GET", source.Url, nil)
-  for key, val := range source.Headers {
-    req.Header.Set(key, val.(string))
-  }
-  resp, err := httpClient.Do(req)
+  task, err := r.Tasks().GetBySourceID(source.ParentID)
   if err != nil {
     return err
   }
-  defer resp.Body.Close()
-
-  if resp.StatusCode != http.StatusOK {
-    return errors.New(
-      fmt.Sprintf(
-        "request error: status[%s] code[%d]",
-        resp.Status,
-        resp.StatusCode,
-      ),
-    )
+  content, err := json.Marshal(task.ExtractResult)
+  if err != nil {
+    return err
   }
-
-  var content string
-  var doc *goquery.Document
-
-  result := make(map[string]interface{})
-  for key, value := range source.ExtractRules {
-    rules := r.ToExtractRules(value)
-    if rules.Html != nil {
-      if doc == nil {
-        doc, err = goquery.NewDocumentFromReader(resp.Body)
+  if items, ok := source.Params["split"].([]interface{}); ok {
+    for _, split := range items {
+      gjson.GetBytes(content, split.(string)).ForEach(func(_, s gjson.Result) bool {
+        url, err := url.Parse(source.Url)
         if err != nil {
-          return err
+          return false
         }
-      }
-      if rules.Html.List != nil {
-        result[key], err = r.ExtractHtmlList(doc, rules.Html)
-      } else {
-        result[key], err = r.ExtractHtml(doc, rules.Html)
-      }
-    }
-    if rules.Json != nil {
-      if _, ok := result[key]; ok {
-        content = result[key].(string)
-      } else {
-        if content == "" {
-          body, _ := ioutil.ReadAll(resp.Body)
-          content = string(body)
-          if content == "" {
-            return errors.New("content is empty")
+        values := url.Query()
+        if items, ok := source.Params["query"].([]interface{}); ok {
+          for _, item := range items {
+            item := item.(map[string]interface{})
+            name := item["name"].(string)
+            value := item["value"].(string)
+            if value == "$0" {
+              value = s.Value().(string)
+            }
+            if value == "$1" {
+              continue
+            }
+            values[name] = []string{value}
           }
         }
-      }
-      if rules.Json.List != "" {
-        result[key], err = r.ExtractJsonList(content, rules.Json)
-        if err != nil {
-          continue
-        }
-      } else {
-        result[key], err = r.ExtractJson(content, rules.Json)
-        if err != nil {
-          continue
-        }
-      }
+        url.RawQuery = values.Encode()
+        r.Tasks().Save("", source.ID, url.String())
+        return true
+      })
     }
   }
+  //source.ExtractResult = r.JSONMap(result)
 
-  source.ExtractResult = r.JSONMap(result)
-
-  r.Db.Model(&models.Source{ID: source.ID}).Updates(source)
+  //r.Db.Model(&models.Source{ID: source.ID}).Updates(source)
 
   return nil
 }
@@ -300,7 +256,7 @@ func (r *SourcesRepository) ExtractHtmlFields(s *goquery.Selection, fields []*Ht
     }
 
     if len(field.Fields) > 0 {
-      result, err := r.ExtractHtmlFields(s, fields)
+      result, err := r.ExtractHtmlFields(s, field.Fields)
       if err != nil {
         continue
       }
@@ -357,20 +313,31 @@ func (r *SourcesRepository) ExtractJson(content string, rules *JsonExtractRules)
 }
 
 func (r *SourcesRepository) ExtractJsonList(content string, rules *JsonExtractRules) (result []map[string]interface{}, err error) {
-  var container = gjson.Get(content, rules.Container)
-  if container.Raw == "" {
-    err = errors.New("container not exists")
-    return
-  }
-
-  container.Get(rules.List).ForEach(func(_, s gjson.Result) bool {
-    data, err := r.ExtractJsonFields(&s, rules.Fields)
-    if err != nil {
-      return false
+  if rules.Container != "" {
+    var container = gjson.Get(content, rules.Container)
+    if container.Raw == "" {
+      err = errors.New("container not exists")
+      return
     }
-    result = append(result, data)
-    return true
-  })
+
+    container.Get(rules.List).ForEach(func(_, s gjson.Result) bool {
+      data, err := r.ExtractJsonFields(&s, rules.Fields)
+      if err != nil {
+        return false
+      }
+      result = append(result, data)
+      return true
+    })
+  } else {
+    gjson.Get(content, rules.List).ForEach(func(_, s gjson.Result) bool {
+      data, err := r.ExtractJsonFields(&s, rules.Fields)
+      if err != nil {
+        return false
+      }
+      result = append(result, data)
+      return true
+    })
+  }
 
   return
 }
@@ -385,11 +352,24 @@ func (r *SourcesRepository) ExtractJsonFields(s *gjson.Result, fields []*JsonExt
     data[field.Name] = selection.Value()
 
     if len(field.Fields) > 0 {
-      result, err := r.ExtractJsonFields(s, fields)
-      if err != nil {
-        continue
+      if selection.IsArray() {
+        var result []map[string]interface{}
+        selection.ForEach(func(_, s gjson.Result) bool {
+          data, err := r.ExtractJsonFields(&s, field.Fields)
+          if err != nil {
+            return false
+          }
+          result = append(result, data)
+          return true
+        })
+        data[field.Name] = result
+      } else {
+        result, err := r.ExtractJsonFields(&selection, field.Fields)
+        if err != nil {
+          continue
+        }
+        data[field.Name] = result
       }
-      data[field.Name] = result
     }
 
     for _, replace := range field.RegexReplace {

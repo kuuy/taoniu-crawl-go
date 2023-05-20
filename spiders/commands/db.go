@@ -2,12 +2,12 @@ package commands
 
 import (
   "log"
-  "taoniu.local/crawls/spiders/models"
 
   "github.com/urfave/cli/v2"
   "gorm.io/gorm"
 
   "taoniu.local/crawls/spiders/common"
+  "taoniu.local/crawls/spiders/models"
 )
 
 type DbHandler struct {
@@ -44,6 +44,7 @@ func (h *DbHandler) migrate() error {
   log.Println("process migrator")
   h.Db.AutoMigrate(
     &models.Source{},
+    &models.Task{},
   )
   return nil
 }

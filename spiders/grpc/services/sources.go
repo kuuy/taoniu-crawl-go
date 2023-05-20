@@ -93,13 +93,38 @@ func (srv *Sources) GetBySlug(ctx context.Context, request *pb.GetBySlugRequest)
 func (srv *Sources) Save(ctx context.Context, request *pb.SaveRequest) (*pb.SaveReply, error) {
   reply := &pb.SaveReply{}
 
-  headers := make(map[string]string)
-  extractRules := make(map[string]*repositories.ExtractRules)
-
+  headers := map[string]string{}
   for _, header := range request.Headers {
     headers[header.Name] = header.Value
   }
 
+  params := map[string]interface{}{}
+
+  var split []string
+  for _, value := range request.Params.Split {
+    split = append(split, value)
+  }
+  if len(split) > 0 {
+    params["split"] = split
+  }
+
+  if request.Params.Scroll != "" {
+    params["scroll"] = request.Params.Scroll
+  }
+
+  var query []map[string]string
+  for _, item := range request.Params.Query {
+    query = append(query, map[string]string{
+      "name":    item.Name,
+      "value":   item.Value,
+      "default": item.Default,
+    })
+  }
+  if len(query) > 0 {
+    params["query"] = query
+  }
+
+  extractRules := map[string]*repositories.ExtractRules{}
   for _, rules := range request.ExtractRules {
     extractRules[rules.Name] = srv.MapExtractRules(rules)
   }
@@ -110,6 +135,7 @@ func (srv *Sources) Save(ctx context.Context, request *pb.SaveRequest) (*pb.Save
     request.Slug,
     request.Url,
     headers,
+    params,
     request.UseProxy,
     int(request.Timeout),
     extractRules,

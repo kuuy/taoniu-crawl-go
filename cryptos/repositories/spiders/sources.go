@@ -15,11 +15,12 @@ func (r *SourcesRepository) Save(
   slug string,
   url string,
   headers map[string]string,
+  params map[string]interface{},
   extractRules map[string]interface{},
   useProxy bool,
   timeout int,
 ) (*pb.SaveReply, error) {
-  return r.Service.Save(parentId, name, slug, url, headers, extractRules, useProxy, timeout)
+  return r.Service.Save(parentId, name, slug, url, headers, params, extractRules, useProxy, timeout)
 }
 
 func (r *SourcesRepository) Get(id string) (*pb.GetReply, error) {

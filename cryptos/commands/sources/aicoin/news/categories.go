@@ -50,10 +50,26 @@ func (h *CategoriesHandler) save() error {
   parent := "aicoin-news"
   name := "资讯分类（AICOIN）"
   slug := "aicoin-news-categories"
-  url := "https://www.aicoin.com/api/data/more?cat={}&last={}"
+  url := "https://www.aicoin.com/api/data/more"
   headers := map[string]string{
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36",
     "Referer":    "https://www.aicoin.com/",
+  }
+  params := map[string]interface{}{
+    "split": []string{
+      "categories.#.slug",
+    },
+    "scroll": "createtime",
+    "query": []map[string]string{
+      {
+        "name":  "cat",
+        "value": "$0",
+      },
+      {
+        "name":  "last",
+        "value": "$1",
+      },
+    },
   }
   extractRules := make(map[string]interface{})
 
@@ -133,7 +149,6 @@ func (h *CategoriesHandler) save() error {
   if err != nil {
     return err
   }
-  log.Println("source", source)
 
   useProxy := true
   timeout := 10
@@ -143,6 +158,7 @@ func (h *CategoriesHandler) save() error {
     slug,
     url,
     headers,
+    params,
     extractRules,
     useProxy,
     timeout,

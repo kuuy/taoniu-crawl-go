@@ -62,6 +62,7 @@ func (srv *Sources) Save(
   slug string,
   url string,
   headers map[string]string,
+  params map[string]interface{},
   extractRules map[string]interface{},
   useProxy bool,
   timeout int,
@@ -80,6 +81,31 @@ func (srv *Sources) Save(
       Name:  name,
       Value: value,
     })
+  }
+
+  request.Params = &pb.HttpParams{}
+  if items, ok := params["split"]; ok {
+    for _, value := range items.([]string) {
+      request.Params.Split = append(request.Params.Split, value)
+    }
+  }
+  if value, ok := params["scroll"].(string); ok {
+    request.Params.Scroll = value
+  }
+  if items, ok := params["query"]; ok {
+    for _, item := range items.([]map[string]string) {
+      query := &pb.HttpQuery{}
+      if value, ok := item["name"]; ok {
+        query.Name = value
+      }
+      if value, ok := item["value"]; ok {
+        query.Value = value
+      }
+      if value, ok := item["default"]; ok {
+        query.Default = value
+      }
+      request.Params.Query = append(request.Params.Query, query)
+    }
   }
 
   for name, data := range extractRules {
@@ -184,46 +210,7 @@ func (srv *Sources) Save(
       }
       if fields, ok := json["fields"]; ok {
         fields := fields.([]interface{})
-        for _, field := range fields {
-          field := field.(map[string]interface{})
-          message := &pb.JsonExtractField{}
-          if value, ok := field["name"]; ok {
-            message.Name = value.(string)
-          }
-          if value, ok := field["path"]; ok {
-            message.Path = value.(string)
-          }
-          if value, ok := field["match"]; ok {
-            message.Match = value.(string)
-          }
-          if values, ok := field["regex_replace"]; ok {
-            values := values.([]map[string]string)
-            for _, value := range values {
-              replace := &pb.RegexReplace{}
-              if value, ok := value["pattern"]; ok {
-                replace.Pattern = value
-              }
-              if value, ok := value["value"]; ok {
-                replace.Value = value
-              }
-              message.RegexReplace = append(message.RegexReplace, replace)
-            }
-          }
-          if values, ok := field["text_replace"]; ok {
-            values := values.([]map[string]string)
-            for _, value := range values {
-              replace := &pb.TextReplace{}
-              if value, ok := value["text"]; ok {
-                replace.Text = value
-              }
-              if value, ok := value["value"]; ok {
-                replace.Value = value
-              }
-              message.TextReplace = append(message.TextReplace, replace)
-            }
-          }
-          rules.Json.Fields = append(rules.Json.Fields, message)
-        }
+        rules.Json.Fields = srv.ToJsonExtractFields(fields)
       }
     }
 
@@ -236,4 +223,58 @@ func (srv *Sources) Save(
   }
 
   return r, nil
+}
+
+func (srv *Sources) ToJsonExtractFields(fields []interface{}) []*pb.JsonExtractField {
+  var result []*pb.JsonExtractField
+  for _, field := range fields {
+    field := field.(map[string]interface{})
+    message := &pb.JsonExtractField{}
+    if value, ok := field["name"]; ok {
+      message.Name = value.(string)
+    }
+    if value, ok := field["path"]; ok {
+      message.Path = value.(string)
+    }
+    if value, ok := field["match"]; ok {
+      message.Match = value.(string)
+    }
+    if values, ok := field["fields"]; ok {
+      values := values.([]map[string]interface{})
+      var items []interface{}
+      for _, value := range values {
+        items = append(items, value)
+      }
+      message.Fields = srv.ToJsonExtractFields(items)
+    }
+    if values, ok := field["regex_replace"]; ok {
+      values := values.([]map[string]string)
+      for _, value := range values {
+        replace := &pb.RegexReplace{}
+        if value, ok := value["pattern"]; ok {
+          replace.Pattern = value
+        }
+        if value, ok := value["value"]; ok {
+          replace.Value = value
+        }
+        message.RegexReplace = append(message.RegexReplace, replace)
+      }
+    }
+    if values, ok := field["text_replace"]; ok {
+      values := values.([]map[string]string)
+      for _, value := range values {
+        replace := &pb.TextReplace{}
+        if value, ok := value["text"]; ok {
+          replace.Text = value
+        }
+        if value, ok := value["value"]; ok {
+          replace.Value = value
+        }
+        message.TextReplace = append(message.TextReplace, replace)
+      }
+    }
+    result = append(result, message)
+  }
+
+  return result
 }

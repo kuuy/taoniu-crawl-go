@@ -68,6 +68,7 @@ func (h *SourcesHandler) save() error {
   headers := map[string]string{
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36",
   }
+  params := map[string]interface{}{}
   extractRules := make(map[string]*repositories.ExtractRules)
   extractRules["categories"] = &repositories.ExtractRules{}
   extractRules["categories"].Html = &repositories.HtmlExtractRules{
@@ -220,6 +221,7 @@ func (h *SourcesHandler) save() error {
     slug,
     url,
     headers,
+    params,
     useProxy,
     timeout,
     extractRules,

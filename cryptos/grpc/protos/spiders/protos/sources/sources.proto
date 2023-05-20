@@ -53,14 +53,27 @@ message SaveRequest {
   string slug = 3;
   string url = 4;
   repeated HttpHeader headers = 5;
-  repeated ExtractRules extractRules = 6;
-  bool useProxy = 7;
-  uint32 timeout = 8;
+  HttpParams params = 6;
+  repeated ExtractRules extractRules = 7;
+  bool useProxy = 8;
+  uint32 timeout = 9;
 }
 
 message HttpHeader {
   string name = 1;
   string value = 2;
+}
+
+message HttpParams {
+  repeated string split = 1;
+  string scroll = 2;
+  repeated HttpQuery query = 3;
+}
+
+message HttpQuery {
+  string name = 1;
+  string value = 2;
+  string default = 3;
 }
 
 message SaveReply {
