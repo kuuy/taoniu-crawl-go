@@ -14,7 +14,7 @@ type Task struct {
   ExtractResult datatypes.JSONMap `gorm:"not null"`
   Status        int               `gorm:"not null;index"`
   CreatedAt     time.Time         `gorm:"not null"`
-  UpdatedAt     time.Time         `gorm:"not null"`
+  UpdatedAt     time.Time         `gorm:"not null;index"`
 }
 
 func (m *Task) TableName() string {

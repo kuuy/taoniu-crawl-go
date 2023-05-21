@@ -9,10 +9,12 @@ import (
   "io/ioutil"
   "net"
   "net/http"
+  "net/url"
   "time"
 
   "github.com/PuerkitoBio/goquery"
   "github.com/rs/xid"
+  "github.com/tidwall/gjson"
   "gorm.io/datatypes"
   "gorm.io/gorm"
 
@@ -32,6 +34,12 @@ func (r *TasksRepository) Source() *SourcesRepository {
     }
   }
   return r.SourcesRepository
+}
+
+func (r *TasksRepository) Scan(status int) []string {
+  var ids []string
+  r.Db.Model(&models.Task{}).Where("status", 3).Pluck("id", &ids)
+  return ids
 }
 
 func (r *TasksRepository) Find(id string) (*models.Task, error) {
@@ -122,6 +130,7 @@ func (r *TasksRepository) Process(task *models.Task) error {
   }
   resp, err := httpClient.Do(req)
   if err != nil {
+    r.Db.Model(&task).Update("status", 3)
     return err
   }
   defer resp.Body.Close()
@@ -181,6 +190,36 @@ func (r *TasksRepository) Process(task *models.Task) error {
     }
   }
 
+  if scroll, ok := source.Params["scroll"]; ok {
+    content, err := json.Marshal(result)
+    if err == nil {
+      items := gjson.GetBytes(content, scroll.(string))
+      if items.Exists() {
+        items := items.Array()
+        score := items[len(items)-1]
+        url, err := url.Parse(task.Url)
+        if err == nil {
+          values := url.Query()
+          if items, ok := source.Params["query"].([]interface{}); ok {
+            for _, item := range items {
+              item := item.(map[string]interface{})
+              name := item["name"].(string)
+              value := item["value"].(string)
+              if value == "$0" {
+                continue
+              }
+              if value == "$1" {
+                value = fmt.Sprintf("%v", score)
+              }
+              values[name] = []string{value}
+            }
+          }
+          url.RawQuery = values.Encode()
+          r.Save("", source.ID, url.String())
+        }
+      }
+    }
+  }
   task.Status = 1
   task.ExtractResult = r.JSONMap(result)
 

@@ -59,7 +59,7 @@ func (h *CategoriesHandler) save() error {
     "split": []string{
       "categories.#.slug",
     },
-    "scroll": "createtime",
+    "scroll": "articles.#.createtime",
     "query": []map[string]string{
       {
         "name":  "cat",

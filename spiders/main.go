@@ -34,7 +34,9 @@ func main() {
     },
     Commands: []*cli.Command{
       commands.NewApiCommand(),
+      commands.NewCronCommand(),
       commands.NewDbCommand(),
+      commands.NewQueueCommand(),
       commands.NewSourcesCommand(),
       commands.NewTasksCommand(),
       commands.NewGrpcCommand(),
