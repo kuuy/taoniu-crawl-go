@@ -12,6 +12,7 @@ func NewNewsCommand() *cli.Command {
     Subcommands: []*cli.Command{
       news.NewHomeCommand(),
       news.NewCategoriesCommand(),
+      news.NewArticlesCommand(),
     },
   }
 }

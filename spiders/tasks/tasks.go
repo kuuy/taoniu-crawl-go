@@ -1,12 +1,12 @@
 package tasks
 
 import (
+  "taoniu.local/crawls/spiders/queue/asynq/jobs"
   "time"
 
   "github.com/hibiken/asynq"
 
   config "taoniu.local/crawls/spiders/config/queue"
-  "taoniu.local/crawls/spiders/queue/jobs"
   "taoniu.local/crawls/spiders/repositories"
 )
 

@@ -1,8 +1,11 @@
 package commands
 
 import (
+  "github.com/hibiken/asynq"
+  "github.com/nats-io/nats.go"
   "gorm.io/gorm"
   "log"
+  "taoniu.local/crawls/spiders/queue/asynq/jobs"
 
   "github.com/urfave/cli/v2"
 
@@ -12,6 +15,8 @@ import (
 
 type TasksHandler struct {
   Db         *gorm.DB
+  Nats       *nats.Conn
+  Asynq      *asynq.Client
   Repository *repositories.TasksRepository
 }
 
@@ -22,10 +27,15 @@ func NewTasksCommand() *cli.Command {
     Usage: "",
     Before: func(c *cli.Context) error {
       h = TasksHandler{
-        Db: common.NewDB(),
+        Db:    common.NewDB(),
+        Nats:  common.NewNats(),
+        Asynq: common.NewAsynqClient(),
       }
       h.Repository = &repositories.TasksRepository{
-        Db: h.Db,
+        Db:    h.Db,
+        Nats:  h.Nats,
+        Asynq: h.Asynq,
+        Job:   &jobs.Tasks{},
       }
       return nil
     },

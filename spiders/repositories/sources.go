@@ -3,20 +3,24 @@ package repositories
 import (
   "encoding/json"
   "errors"
-  "github.com/PuerkitoBio/goquery"
-  "github.com/rs/xid"
-  "github.com/tidwall/gjson"
-  "gorm.io/datatypes"
-  "gorm.io/gorm"
   "net/url"
   "regexp"
   "strings"
 
+  "github.com/PuerkitoBio/goquery"
+  "github.com/hibiken/asynq"
+  "github.com/rs/xid"
+  "github.com/tidwall/gjson"
+  "gorm.io/datatypes"
+  "gorm.io/gorm"
+
   "taoniu.local/crawls/spiders/models"
+  "taoniu.local/crawls/spiders/queue/asynq/jobs"
 )
 
 type SourcesRepository struct {
   Db              *gorm.DB
+  Asynq           *asynq.Client
   TasksRepository *TasksRepository
 }
 
@@ -74,7 +78,9 @@ type JsonExtractField struct {
 func (r *SourcesRepository) Tasks() *TasksRepository {
   if r.TasksRepository == nil {
     r.TasksRepository = &TasksRepository{
-      Db: r.Db,
+      Db:    r.Db,
+      Asynq: r.Asynq,
+      Job:   &jobs.Tasks{},
     }
   }
   return r.TasksRepository
@@ -87,6 +93,12 @@ func (r *SourcesRepository) Find(id string) (*models.Source, error) {
     return nil, result.Error
   }
   return entity, nil
+}
+
+func (r *SourcesRepository) All(fields []string) []*models.Source {
+  var sources []*models.Source
+  r.Db.Select(fields).Find(&sources)
+  return sources
 }
 
 func (r *SourcesRepository) Get(id string) (*models.Source, error) {

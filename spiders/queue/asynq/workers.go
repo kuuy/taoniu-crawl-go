@@ -1,8 +1,8 @@
-package queue
+package asynq
 
 import (
   "github.com/hibiken/asynq"
-  "taoniu.local/crawls/spiders/queue/workers"
+  "taoniu.local/crawls/spiders/queue/asynq/workers"
 )
 
 type Workers struct{}

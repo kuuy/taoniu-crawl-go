@@ -100,11 +100,11 @@ func (srv *Sources) Save(ctx context.Context, request *pb.SaveRequest) (*pb.Save
 
   params := map[string]interface{}{}
 
-  var split []string
+  split := map[string]interface{}{}
   for _, value := range request.Params.Split {
-    split = append(split, value)
+    split[value.Parent] = value.Path
   }
-  if len(split) > 0 {
+  if len(request.Params.Split) > 0 {
     params["split"] = split
   }
 

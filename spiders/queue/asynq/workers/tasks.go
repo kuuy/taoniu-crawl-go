@@ -4,29 +4,40 @@ import (
   "context"
   "encoding/json"
   "fmt"
+  "time"
+
   "github.com/go-redis/redis/v8"
   "github.com/hibiken/asynq"
+  "github.com/nats-io/nats.go"
   "gorm.io/gorm"
+
   "taoniu.local/crawls/spiders/common"
+  "taoniu.local/crawls/spiders/queue/asynq/jobs"
   "taoniu.local/crawls/spiders/repositories"
-  "time"
 )
 
 type Tasks struct {
   Db         *gorm.DB
   Rdb        *redis.Client
+  Nats       *nats.Conn
+  Asynq      *asynq.Client
   Ctx        context.Context
   Repository *repositories.TasksRepository
 }
 
 func NewTasks() *Tasks {
   h := &Tasks{
-    Db:  common.NewDB(),
-    Rdb: common.NewRedis(),
-    Ctx: context.Background(),
+    Db:    common.NewDB(),
+    Rdb:   common.NewRedis(),
+    Nats:  common.NewNats(),
+    Asynq: common.NewAsynqClient(),
+    Ctx:   context.Background(),
   }
   h.Repository = &repositories.TasksRepository{
-    Db: h.Db,
+    Db:    h.Db,
+    Nats:  h.Nats,
+    Asynq: h.Asynq,
+    Job:   &jobs.Tasks{},
   }
   return h
 }

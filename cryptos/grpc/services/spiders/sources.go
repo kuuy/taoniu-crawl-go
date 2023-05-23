@@ -83,10 +83,14 @@ func (srv *Sources) Save(
     })
   }
 
-  request.Params = &pb.HttpParams{}
+  request.Params = &pb.Params{}
   if items, ok := params["split"]; ok {
-    for _, value := range items.([]string) {
-      request.Params.Split = append(request.Params.Split, value)
+    for parent, value := range items.(map[string]interface{}) {
+      split := &pb.Split{
+        Parent: parent,
+      }
+      split.Path = value.([]string)
+      request.Params.Split = append(request.Params.Split, split)
     }
   }
   if value, ok := params["scroll"].(string); ok {

@@ -53,7 +53,7 @@ message SaveRequest {
   string slug = 3;
   string url = 4;
   repeated HttpHeader headers = 5;
-  HttpParams params = 6;
+  Params params = 6;
   repeated ExtractRules extractRules = 7;
   bool useProxy = 8;
   uint32 timeout = 9;
@@ -64,10 +64,15 @@ message HttpHeader {
   string value = 2;
 }
 
-message HttpParams {
-  repeated string split = 1;
+message Params {
+  repeated Split split = 1;
   string scroll = 2;
   repeated HttpQuery query = 3;
+}
+
+message Split {
+  string parent = 1;
+  repeated string path = 2;
 }
 
 message HttpQuery {

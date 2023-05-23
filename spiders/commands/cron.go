@@ -7,7 +7,7 @@ import (
   "gorm.io/gorm"
   "log"
   "sync"
-  "taoniu.local/crawls/spiders/queue/jobs"
+  "taoniu.local/crawls/spiders/queue/asynq/jobs"
   "taoniu.local/crawls/spiders/repositories"
 
   "taoniu.local/crawls/spiders/common"

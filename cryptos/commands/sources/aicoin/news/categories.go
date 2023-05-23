@@ -56,8 +56,8 @@ func (h *CategoriesHandler) save() error {
     "Referer":    "https://www.aicoin.com/",
   }
   params := map[string]interface{}{
-    "split": []string{
-      "categories.#.slug",
+    "split": map[string]interface{}{
+      "aicoin-news": []string{"categories.#.slug"},
     },
     "scroll": "articles.#.createtime",
     "query": []map[string]string{

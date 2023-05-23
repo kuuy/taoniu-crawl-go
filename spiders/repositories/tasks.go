@@ -13,17 +13,24 @@ import (
   "time"
 
   "github.com/PuerkitoBio/goquery"
+  "github.com/hibiken/asynq"
+  "github.com/nats-io/nats.go"
   "github.com/rs/xid"
   "github.com/tidwall/gjson"
   "gorm.io/datatypes"
   "gorm.io/gorm"
 
   "taoniu.local/crawls/spiders/common"
+  config "taoniu.local/crawls/spiders/config/queue"
   "taoniu.local/crawls/spiders/models"
+  "taoniu.local/crawls/spiders/queue/asynq/jobs"
 )
 
 type TasksRepository struct {
   Db                *gorm.DB
+  Nats              *nats.Conn
+  Asynq             *asynq.Client
+  Job               *jobs.Tasks
   SourcesRepository *SourcesRepository
 }
 
@@ -94,6 +101,16 @@ func (r *TasksRepository) Save(
     entity.SourceID = sourceId
     entity.Status = 0
     r.Db.Model(&models.Task{ID: entity.ID}).Updates(entity)
+  }
+
+  job, err := r.Job.Process(entity.ID)
+  if err == nil {
+    r.Asynq.Enqueue(
+      job,
+      asynq.Queue(config.TASKS),
+      asynq.MaxRetry(0),
+      asynq.Timeout(5*time.Minute),
+    )
   }
 
   return nil
@@ -224,6 +241,9 @@ func (r *TasksRepository) Process(task *models.Task) error {
   task.ExtractResult = r.JSONMap(result)
 
   r.Db.Model(&models.Task{ID: task.ID}).Updates(task)
+
+  r.Nats.Publish(source.Slug, []byte(task.ID))
+  r.Nats.Flush()
 
   return nil
 }
